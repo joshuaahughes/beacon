@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package meshtastic;
+
+message Data {
+  bytes payload = 1;
+  PortNum portnum = 2;
+  bool want_response = 3;
+  int32 request_id = 4;
+  bool delayed = 5;
+  bool roundstart = 6;
+  bool roundend = 7;
+}
+
+message MeshPacket {
+  uint32 from = 1;
+  uint32 to = 2;
+  int32 id = 3;
+  bool want_ack = 4;
+  int32 hop_limit = 5;
+  Data decoded = 6;
+  int32 channel = 7;
+  Priority priority = 8;
+  bool pki_encrypted = 9;
+  bytes public_key = 10;
+
+  enum Priority {
+    UNSET = 0;
+    MIN = 1;
+    BACKGROUND = 10;
+    DEFAULT = 64;
+    RELIABLE = 70;
+    ACK = 120;
+    MAX = 127;
+  }
+}
+
+message TextMessage {
+  string text = 1;
+}
+
+message AdminMessage {
+  bool getNodeInfoRequest = 1;
+  NodeInfo nodeInfo = 2;
+}
+
+message NodeInfo {
+  uint32 num = 1;
+  string user = 2;
+  string longName = 3;
+  string shortName = 4;
+  string macaddr = 5;
+  uint32 hwModel = 6;
+}
+
+message Position {
+  int32 latitude = 1;  // Latitude in degrees * 1e7
+  int32 longitude = 2; // Longitude in degrees * 1e7
+  int32 altitude = 3;  // Altitude in meters
+  int32 time = 4;      // Time since epoch in seconds
+  int32 batteryLevel = 5; // Battery level in percent
+  int32 speed = 6;     // Speed in meters per second
+  int32 heading = 7;   // Heading in degrees
+  int32 satsInView = 8; // Number of satellites in view
+  int32 satsInUse = 9;  // Number of satellites in use
+  int32 hdop = 10;      // Horizontal dilution of precision
+  int32 fixQuality = 11; // GPS fix quality
+  int32 fixType = 12;    // GPS fix type
+}
+
+enum PortNum {
+  UNKNOWN_APP = 0;
+  TEXT_MESSAGE_APP = 1;
+  TELEMETRY_APP = 2;
+  ADMIN_APP = 3;
+  POSITION_APP = 4;
+} 
