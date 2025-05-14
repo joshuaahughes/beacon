@@ -1,0 +1,18 @@
+# Default server configuration
+http {
+       server {
+              
+              listen 8080 default_server;
+              listen [::]:8080 default_server;
+
+              root /var/www/html/meshager;
+              index index.html index.htm;
+
+              server_name _;
+
+              location / {
+                     
+                     proxy_pass http://localhost:5000;
+              }
+       }
+}
