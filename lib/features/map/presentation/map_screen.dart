@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:beacon/core/utils/platform_io.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -9,16 +10,18 @@ import 'package:beacon/features/map/presentation/offline_map_view.dart';
 import 'package:beacon/features/map/domain/repositories/offline_map_repository.dart';
 
 import 'package:beacon/features/map/presentation/map_download_screen.dart';
+import 'package:beacon/data/providers/database_providers.dart';
+import 'package:beacon/domain/models/node_model.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 
-class MapScreen extends StatefulWidget {
+class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
 
   @override
-  State<MapScreen> createState() => _MapScreenState();
+  ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends ConsumerState<MapScreen> {
   late OfflineMapRepository _mapRepository;
   bool _isLoading = true;
   LatLng _currentLocation = const LatLng(0, 0); // Default
@@ -101,9 +104,25 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final nodesAsync = ref.watch(nodesProvider);
+
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
+    final List<Marker> nodeMarkers = [];
+    nodesAsync.whenData((nodes) {
+      for (final node in nodes) {
+        if (node.latitude != null && node.longitude != null) {
+          nodeMarkers.add(Marker(
+            point: LatLng(node.latitude!, node.longitude!),
+            width: 40,
+            height: 40,
+            child: const Icon(Icons.person_pin_circle, color: Colors.red, size: 30),
+          ));
+        }
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -146,9 +165,9 @@ class _MapScreenState extends State<MapScreen> {
       body: Stack(
         children: [
           if (_isOfflineMode)
-             _buildOfflineView()
+             _buildOfflineView(nodeMarkers)
           else
-            _buildOnlineMap(),
+            _buildOnlineMap(nodeMarkers),
           
           // User location button
           Positioned(
@@ -165,7 +184,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _buildOfflineView() {
+  Widget _buildOfflineView(List<Marker> extraMarkers) {
     // If user has selected a specific Store from the PopupMenu, show that
     if (_selectedStoreName != null) {
       return FlutterMap(
@@ -181,6 +200,17 @@ class _MapScreenState extends State<MapScreen> {
               stores: {_selectedStoreName!: BrowseStoreStrategy.read},
             ),
           ),
+          MarkerLayer(
+            markers: [
+              Marker(
+                point: _currentLocation,
+                width: 30,
+                height: 30,
+                child: const Icon(Icons.person_pin_circle, color: Colors.blue, size: 30),
+              ),
+              ...extraMarkers,
+            ],
+          ),
         ],
       );
     }
@@ -191,13 +221,14 @@ class _MapScreenState extends State<MapScreen> {
         key: ValueKey(_selectedOfflineRegion!.filePath),
         mbtilesPath: _selectedOfflineRegion!.filePath,
         initialCenter: _currentLocation,
+        extraMarkers: extraMarkers,
       );
     }
 
     return const Center(child: Text('No offline data selected.'));
   }
 
-  Widget _buildOnlineMap() {
+  Widget _buildOnlineMap(List<Marker> extraMarkers) {
     return FlutterMap(
       options: MapOptions(
         initialCenter: _currentLocation,
@@ -222,6 +253,7 @@ class _MapScreenState extends State<MapScreen> {
               height: 30,
               child: const Icon(Icons.person_pin_circle, color: Colors.blue, size: 30),
             ),
+            ...extraMarkers,
           ],
         ),
       ],

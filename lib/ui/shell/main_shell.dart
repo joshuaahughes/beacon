@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beacon/ui/shell/blank_screen.dart';
+import 'package:beacon/data/services/mesh_data_service.dart';
 import 'package:beacon/features/map/presentation/map_screen.dart';
 import 'package:beacon/features/messaging/presentation/conversations_screen.dart';
 import 'package:beacon/features/nodes/presentation/nodes_screen.dart';
 import 'package:beacon/features/settings/presentation/settings_screen.dart';
 
-class MainShell extends StatefulWidget {
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> {
   int _currentIndex = 2; // Default to Map tab for this prototype
 
   final List<Widget> _tabs = [
@@ -24,6 +26,9 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep the parsing service alive globally
+    ref.watch(meshDataServiceProvider);
+
     return Scaffold(
       body: _tabs[_currentIndex],
       bottomNavigationBar: NavigationBar(

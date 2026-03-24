@@ -9,11 +9,13 @@ import 'package:latlong2/latlong.dart';
 class OfflineMapView extends StatefulWidget {
   final String mbtilesPath;
   final LatLng? initialCenter;
+  final List<Marker>? extraMarkers;
   
   const OfflineMapView({
     super.key, 
     required this.mbtilesPath,
     this.initialCenter,
+    this.extraMarkers,
   });
 
   @override
@@ -106,7 +108,7 @@ class _OfflineMapViewState extends State<OfflineMapView> {
               maxNativeZoom: metadata.maxZoom?.toInt() ?? 18,
               minNativeZoom: metadata.minZoom?.toInt() ?? 0,
             ),
-            // Inject Meshtastic Node markers
+            // Inject extra dynamic markers alongside standard center
             MarkerLayer(
               markers: [
                 Marker(
@@ -119,6 +121,7 @@ class _OfflineMapViewState extends State<OfflineMapView> {
                     size: 30,
                   ),
                 ),
+                if (widget.extraMarkers != null) ...widget.extraMarkers!,
               ],
             ),
           ],
