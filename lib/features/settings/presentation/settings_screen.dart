@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beacon/features/ble/presentation/bluetooth_scanning_screen.dart';
 import 'package:beacon/data/providers/ble_providers.dart';
+import 'package:beacon/features/settings/presentation/radio_config_hub_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -40,6 +41,17 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const BluetoothScanningScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings_outlined),
+            title: const Text('Radio Configuration'),
+            subtitle: const Text('Node, LoRa, Power, Display'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const RadioConfigHubScreen()),
               );
             },
           ),

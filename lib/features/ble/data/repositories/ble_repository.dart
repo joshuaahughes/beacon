@@ -11,6 +11,7 @@ class BleRepository {
   static const String toRadioUuid = 'f75c76d2-129e-4dad-a1dd-7866124401e7';
 
   Timer? _fromRadioPollingTimer;
+  BluetoothCharacteristic? _toRadioChar;
 
   final StreamController<FromRadio> _incomingMessagesController = StreamController<FromRadio>.broadcast();
   Stream<FromRadio> get incomingMessages => _incomingMessagesController.stream;
@@ -72,7 +73,7 @@ class BleRepository {
     );
     
     // Find ToRadio characteristic
-    final toRadio = meshService.characteristics.firstWhere(
+    _toRadioChar = meshService.characteristics.firstWhere(
       (c) => c.characteristicUuid.toString().toLowerCase() == toRadioUuid.toLowerCase(),
       orElse: () {
         final available = meshService.characteristics.map((c) => c.characteristicUuid.toString()).join(', ');
@@ -146,7 +147,14 @@ class BleRepository {
     final wantConfigId = DateTime.now().millisecondsSinceEpoch & 0xFFFFFFFF; // Random 32-bit int
     final toRadioMsg = ToRadio(wantConfigId: wantConfigId);
     
-    await toRadio.write(toRadioMsg.writeToBuffer(), withoutResponse: false);
+    await _toRadioChar!.write(toRadioMsg.writeToBuffer(), withoutResponse: false);
+  }
+
+  Future<void> sendToRadio(ToRadio msg) async {
+    if (_toRadioChar == null) {
+      throw Exception('Not connected to a device or toRadio characteristic not found');
+    }
+    await _toRadioChar!.write(msg.writeToBuffer(), withoutResponse: false);
   }
 
   Future<void> disconnect(BluetoothDevice device) async {

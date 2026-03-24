@@ -119,4 +119,33 @@ void main() {
       verify(() => fromRadioChar.read()).called(3);
     });
   });
+
+  group('BleRepository out-bound ToRadio messages', () {
+    test('sendToRadio throws exception if not connected to device', () async {
+      final msg = ToRadio(wantConfigId: 123);
+      expect(
+        () => bleRepository.sendToRadio(msg),
+        throwsA(isA<Exception>().having((e) => e.toString(), 'message', contains('Not connected to a device'))),
+      );
+    });
+
+    test('sendToRadio writes buffer to toRadio characteristic when connected', () async {
+      when(() => fromNumChar.onValueReceived).thenAnswer((_) => const Stream.empty());
+      when(() => fromRadioChar.read()).thenAnswer((_) async => <int>[]);
+      
+      // Connect first to initialize the characteristics
+      await bleRepository.connect(mockDevice);
+      
+      clearInteractions(toRadioChar);
+      
+      final msg = ToRadio(wantConfigId: 123);
+      await bleRepository.sendToRadio(msg);
+
+      // Verify that write was called on toRadio char with the message buffer
+      verify(() => toRadioChar.write(
+        msg.writeToBuffer(), 
+        withoutResponse: false
+      )).called(1);
+    });
+  });
 }
