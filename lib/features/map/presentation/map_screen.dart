@@ -1,0 +1,230 @@
+import 'package:flutter/foundation.dart';
+import 'package:beacon/core/utils/platform_io.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:beacon/features/map/presentation/offline_map_view.dart';
+import 'package:beacon/features/map/domain/repositories/offline_map_repository.dart';
+
+import 'package:beacon/features/map/presentation/map_download_screen.dart';
+import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
+
+class MapScreen extends StatefulWidget {
+  const MapScreen({super.key});
+
+  @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  late OfflineMapRepository _mapRepository;
+  bool _isLoading = true;
+  LatLng _currentLocation = const LatLng(0, 0); // Default
+  OfflineRegion? _selectedOfflineRegion;
+  bool _isOfflineMode = false;
+  String? _selectedStoreName;
+  List<String> _availableStores = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _initMap();
+  }
+
+  Future<void> _initMap() async {
+    await _determinePosition();
+    if (!kIsWeb) {
+      await _initStorage();
+    }
+    setState(() => _isLoading = false);
+    if (!kIsWeb) {
+      _refreshStores();
+    }
+  }
+
+  Future<void> _refreshStores() async {
+    if (kIsWeb) return;
+    final stores = await FMTCRoot.stats.storesAvailable;
+    setState(() {
+      _availableStores = stores.map((s) => s.storeName).toList();
+      if (_availableStores.isNotEmpty && _selectedStoreName == null) {
+        _selectedStoreName = _availableStores.first;
+      }
+    });
+  }
+
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _currentLocation = LatLng(position.latitude, position.longitude);
+      });
+    } catch (e) {
+      debugPrint('Error getting location: $e');
+    }
+  }
+
+  Future<void> _initStorage() async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    final mapDir = Directory('${docsDir.path}/maps');
+    _mapRepository = OfflineMapRepository(storageDirectory: mapDir);
+    
+    final regions = await _mapRepository.getDownloadedRegions();
+    if (regions.isNotEmpty) {
+      setState(() {
+        _selectedOfflineRegion = regions.first;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Map'),
+        actions: [
+          IconButton(
+            icon: Icon(_isOfflineMode ? Icons.cloud_off : Icons.cloud_queue),
+            onPressed: () {
+              if (_selectedOfflineRegion == null && _availableStores.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('No offline maps available. Download one first.')),
+                );
+                return;
+              }
+              setState(() => _isOfflineMode = !_isOfflineMode);
+            },
+            tooltip: _isOfflineMode ? 'Switch to Online' : 'Switch to Offline',
+          ),
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: () async {
+               await Navigator.of(context).push(
+                 MaterialPageRoute(
+                   builder: (context) => MapDownloadScreen(center: _currentLocation),
+                 ),
+               );
+               _refreshStores();
+            },
+          ),
+          if (_availableStores.isNotEmpty)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.layers),
+              onSelected: (val) => setState(() => _selectedStoreName = val),
+              itemBuilder: (context) => _availableStores.map((s) => 
+                PopupMenuItem(value: s, child: Text('Store: $s'))
+              ).toList(),
+            ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          if (_isOfflineMode)
+             _buildOfflineView()
+          else
+            _buildOnlineMap(),
+          
+          // User location button
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton(
+              mini: true,
+              onPressed: _determinePosition,
+              child: const Icon(Icons.my_location),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOfflineView() {
+    // If user has selected a specific Store from the PopupMenu, show that
+    if (_selectedStoreName != null) {
+      return FlutterMap(
+        options: MapOptions(
+          initialCenter: _currentLocation,
+          initialZoom: 13,
+        ),
+        children: [
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.beacon.beacon',
+            tileProvider: FMTCTileProvider(
+              stores: {_selectedStoreName!: BrowseStoreStrategy.read},
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Otherwise fallback to MBTiles if available
+    if (_selectedOfflineRegion != null) {
+      return OfflineMapView(
+        key: ValueKey(_selectedOfflineRegion!.filePath),
+        mbtilesPath: _selectedOfflineRegion!.filePath,
+        initialCenter: _currentLocation,
+      );
+    }
+
+    return const Center(child: Text('No offline data selected.'));
+  }
+
+  Widget _buildOnlineMap() {
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: _currentLocation,
+        initialZoom: 13,
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.beacon.beacon',
+          // Optionally cache even in online mode
+          tileProvider: _selectedStoreName != null 
+            ? FMTCTileProvider(
+                stores: {_selectedStoreName!: BrowseStoreStrategy.readUpdateCreate},
+              )
+            : null,
+        ),
+        MarkerLayer(
+          markers: [
+            Marker(
+              point: _currentLocation,
+              width: 30,
+              height: 30,
+              child: const Icon(Icons.person_pin_circle, color: Colors.blue, size: 30),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
