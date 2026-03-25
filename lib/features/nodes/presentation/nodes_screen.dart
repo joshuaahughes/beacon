@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beacon/data/providers/database_providers.dart';
 import 'package:intl/intl.dart';
+import 'package:beacon/core/presentation/widgets/branded_app_bar.dart';
 
 class NodesScreen extends ConsumerWidget {
   const NodesScreen({super.key});
@@ -11,9 +12,7 @@ class NodesScreen extends ConsumerWidget {
     final nodesAsync = ref.watch(nodesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nodes'),
-      ),
+      appBar: const BrandedAppBar(title: 'Nodes'),
       body: nodesAsync.when(
         data: (nodes) {
           if (nodes.isEmpty) {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beacon/data/providers/database_providers.dart';
 import 'package:intl/intl.dart';
 import 'package:beacon/features/messaging/presentation/message_thread_screen.dart';
+import 'package:beacon/core/presentation/widgets/branded_app_bar.dart';
 
 class ConversationsScreen extends ConsumerWidget {
   const ConversationsScreen({super.key});
@@ -13,9 +14,7 @@ class ConversationsScreen extends ConsumerWidget {
     final channels = [0, 1, 2]; // Map to Meshtastic channel indices
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Messages'),
-      ),
+      appBar: const BrandedAppBar(title: 'Messages'),
       body: ListView.builder(
         itemCount: channels.length,
         itemBuilder: (context, index) {

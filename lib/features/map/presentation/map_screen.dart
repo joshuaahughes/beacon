@@ -13,6 +13,7 @@ import 'package:beacon/features/map/presentation/map_download_screen.dart';
 import 'package:beacon/data/providers/database_providers.dart';
 import 'package:beacon/domain/models/node_model.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
+import 'package:beacon/core/presentation/widgets/branded_app_bar.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -125,8 +126,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Map'),
+      appBar: BrandedAppBar(
+        title: 'Map',
         actions: [
           IconButton(
             icon: Icon(_isOfflineMode ? Icons.cloud_off : Icons.cloud_queue),

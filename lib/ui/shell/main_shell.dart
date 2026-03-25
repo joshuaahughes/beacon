@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:beacon/ui/shell/blank_screen.dart';
 import 'package:beacon/data/services/mesh_data_service.dart';
 import 'package:beacon/features/map/presentation/map_screen.dart';
 import 'package:beacon/features/messaging/presentation/conversations_screen.dart';

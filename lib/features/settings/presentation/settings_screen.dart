@@ -4,6 +4,8 @@ import 'package:beacon/features/ble/presentation/bluetooth_scanning_screen.dart'
 import 'package:beacon/data/providers/ble_providers.dart';
 import 'package:beacon/features/settings/presentation/radio_config_hub_screen.dart';
 import 'package:beacon/features/settings/presentation/module_config_hub_screen.dart';
+import 'package:beacon/core/presentation/widgets/brand_logo.dart';
+import 'package:beacon/core/presentation/widgets/branded_app_bar.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -14,11 +16,27 @@ class SettingsScreen extends ConsumerWidget {
     final deviceName = connectedDevice?.platformName ?? 'None connected';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: const BrandedAppBar(title: 'Settings'),
       body: ListView(
         children: [
+          const SizedBox(height: 32),
+          Center(
+            child: Column(
+              children: [
+                const BrandLogo(size: 80),
+                const SizedBox(height: 16),
+                Text(
+                  'Beacon',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                ),
+                const Text('Version 1.0.0'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
           _buildSectionHeader(context, 'Application'),
           ListTile(
             leading: const Icon(Icons.palette_outlined),
