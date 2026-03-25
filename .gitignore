@@ -43,6 +43,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-thoughts/
+
+# Agent related
+/thoughts
 .opencode/local.json
 .gemini/.env
+.gemini/
+.opencode/
+agent_docs/
+agents.md
