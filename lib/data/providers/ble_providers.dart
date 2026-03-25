@@ -30,3 +30,14 @@ final connectedDeviceProvider = NotifierProvider<ConnectedDeviceNotifier, Blueto
 final connectionStateProvider = StreamProvider.family<BluetoothConnectionState, BluetoothDevice>((ref, device) {
   return device.connectionState;
 });
+
+class LocalNodeNumNotifier extends Notifier<int?> {
+  @override
+  int? build() => null;
+  
+  void setNodeNum(int? nodeNum) {
+    state = nodeNum;
+  }
+}
+
+final localNodeNumProvider = NotifierProvider<LocalNodeNumNotifier, int?>(LocalNodeNumNotifier.new);

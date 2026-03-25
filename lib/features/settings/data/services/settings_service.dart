@@ -6,6 +6,7 @@ import 'package:beacon/core/proto/gen/meshtastic/portnums.pbenum.dart';
 import 'package:beacon/core/proto/gen/meshtastic/admin.pb.dart';
 import 'package:beacon/core/proto/gen/meshtastic/config.pb.dart';
 import 'package:beacon/core/proto/gen/meshtastic/module_config.pb.dart';
+import 'package:beacon/core/proto/gen/meshtastic/channel.pb.dart';
 import 'package:beacon/data/providers/ble_providers.dart';
 
 class DeviceConfigNotifier extends Notifier<Config?> {
@@ -51,6 +52,7 @@ final nodeUserProvider = NotifierProvider<NodeUserNotifier, User?>(
 class SettingsService {
   final Ref ref;
   StreamSubscription<FromRadio>? _subscription;
+  List<int>? _sessionPasskey;
 
   SettingsService(this.ref) {
     _init();
@@ -68,6 +70,11 @@ class SettingsService {
     if (packet.hasDecoded() && packet.decoded.portnum == PortNum.ADMIN_APP) {
       try {
         final adminMsg = AdminMessage.fromBuffer(packet.decoded.payload);
+
+        if (adminMsg.hasSessionPasskey()) {
+          _sessionPasskey = adminMsg.sessionPasskey;
+          debugPrint('Session Passkey Updated: ${_sessionPasskey?.length} bytes');
+        }
 
         if (adminMsg.hasGetConfigResponse()) {
           ref
@@ -124,15 +131,47 @@ class SettingsService {
     ref.read(moduleConfigProvider.notifier).setConfig(config);
   }
 
+  Future<void> setChannel(Channel channel) async {
+    final adminMsg = AdminMessage(setChannel: channel);
+    await _sendAdminMessage(adminMsg);
+  }
+
+  Future<void> setCannedMessages(String messages) async {
+    final adminMsg = AdminMessage(setCannedMessageModuleMessages: messages);
+    await _sendAdminMessage(adminMsg);
+  }
+
+  Future<void> setRingtone(String ringtone) async {
+    final adminMsg = AdminMessage(setRingtoneMessage: ringtone);
+    await _sendAdminMessage(adminMsg);
+  }
+
+  Future<void> setFixedPosition(Position position) async {
+    final adminMsg = AdminMessage(setFixedPosition: position);
+    await _sendAdminMessage(adminMsg);
+  }
+
   Future<void> _sendAdminMessage(AdminMessage adminMsg) async {
     final repo = ref.read(bleRepositoryProvider);
+    final localNodeNum = ref.read(localNodeNumProvider);
+
+    // Include the session passkey if we have one
+    if (_sessionPasskey != null) {
+      adminMsg.sessionPasskey = _sessionPasskey!;
+    }
 
     final data = Data(
       portnum: PortNum.ADMIN_APP,
       payload: adminMsg.writeToBuffer(),
     );
 
-    final meshPacket = MeshPacket(decoded: data);
+    final meshPacket = MeshPacket(
+      decoded: data,
+      to: 0xFFFFFFFF, // Broadcast for local node admin
+      from: localNodeNum ?? 0,
+      id: DateTime.now().millisecondsSinceEpoch & 0xFFFFFFFF,
+      wantAck: true,
+    );
 
     final toRadio = ToRadio(packet: meshPacket);
 

@@ -21,6 +21,12 @@ class MeshDataService {
   }
 
   void _onFromRadio(FromRadio fromRadio) async {
+    if (fromRadio.hasMyInfo()) {
+      ref.read(localNodeNumProvider.notifier).setNodeNum(fromRadio.myInfo.myNodeNum);
+      debugPrint('My Node Info Received: ${fromRadio.myInfo.myNodeNum}');
+      return;
+    }
+
     if (!fromRadio.hasPacket()) return;
     final packet = fromRadio.packet;
     

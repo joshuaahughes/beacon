@@ -99,8 +99,25 @@ void main() {
       expect(currentConfigHolder?.lora.hopLimit, 3);
     });
     
-    test('setConfig wraps config in AdminMessage and sends over BLE', () async {
+    test('setConfig wraps config in AdminMessage and sends over BLE with session_passkey and proper addressing', () async {
       final service = container.read(settingsServiceProvider);
+      
+      // First, simulate receiving a passkey
+      final passkey = [1, 2, 3, 4];
+      final adminResponse = AdminMessage(sessionPasskey: passkey);
+      final fromRadioMsg = FromRadio(
+        packet: MeshPacket(
+          decoded: Data(
+            portnum: PortNum.ADMIN_APP,
+            payload: adminResponse.writeToBuffer(),
+          ),
+        ),
+      );
+      incomingMessagesController.add(fromRadioMsg);
+      await Future.delayed(Duration.zero);
+
+      // Set a local node num
+      container.read(localNodeNumProvider.notifier).setNodeNum(12345);
       
       final loraConfig = Config_LoRaConfig(
         region: Config_LoRaConfig_RegionCode.EU_868,
@@ -112,10 +129,18 @@ void main() {
       final captured = verify(() => mockBleRepo.sendToRadio(captureAny())).captured;
       final toRadio = captured.first as ToRadio;
       final meshPacket = toRadio.packet;
-      final adminMsg = AdminMessage.fromBuffer(meshPacket.decoded.payload);
       
+      // Verify MeshPacket addressing
+      expect(meshPacket.to, 0xFFFFFFFF);
+      expect(meshPacket.from, 12345);
+      expect(meshPacket.id, isNot(0));
+      expect(meshPacket.wantAck, isTrue);
+
+      // Verify AdminMessage and session_passkey
+      final adminMsg = AdminMessage.fromBuffer(meshPacket.decoded.payload);
       expect(adminMsg.hasSetConfig(), isTrue);
       expect(adminMsg.setConfig.lora.region, Config_LoRaConfig_RegionCode.EU_868);
+      expect(adminMsg.sessionPasskey, passkey);
     });
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beacon/features/ble/presentation/bluetooth_scanning_screen.dart';
 import 'package:beacon/data/providers/ble_providers.dart';
 import 'package:beacon/features/settings/presentation/radio_config_hub_screen.dart';
+import 'package:beacon/features/settings/presentation/module_config_hub_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -52,6 +53,17 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const RadioConfigHubScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.extension_outlined),
+            title: const Text('Module Configuration'),
+            subtitle: const Text('MQTT, Telemetry, Sensors, TAK'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ModuleConfigHubScreen()),
               );
             },
           ),
